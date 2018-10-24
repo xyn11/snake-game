@@ -1,5 +1,4 @@
 import curses
-from curses import KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN
 from random import randint
 import time
 
@@ -9,6 +8,7 @@ class Board:
         self.n = n
         self.score = 0
         self.l = []
+        self.flag = False
 
     def snakeposition(self, y, x):
         self.l = [[y, x]]
@@ -33,7 +33,8 @@ class Board:
             scr.addstr(0, x, '+')
             scr.addstr(self.m, x, '+')
         scr.addstr(self.m+1, 5, 'score:'+str(self.score))
-
+        if self.over():
+            scr.addstr(self.m+2, 5, 'Game Over')
         scr.addstr(self.foody, self.foodx, '?') 
         scr.addstr(self.l[-1][0], self.l[-1][1], '*')
         for i in range(len(self.l) - 2, -1, -1):
@@ -42,14 +43,16 @@ class Board:
         scr.refresh()
 
     def over(self):
-        return self.over
+        if self.flag == True:
+            return True        
 
     def move(self, dy, dx):
         yy, xx = self.snakehead()
         yy += dy
         xx += dx
-        if [yy, xx] in self.l or yy < 1 or yy >= self.m or xx < 1 or xx >= self.n:
-            return        
+        if [yy, xx] in self.l or yy < 1 or yy >= self.m or xx < 1 or xx >= self.n or [yy, xx] in self.l[:-1]:
+            self.flag = True
+            return           
         if yy == self.foody and xx == self.foodx:
             self.score += 1
             self.l.append([yy, xx])
@@ -57,38 +60,46 @@ class Board:
         else:
             self.l = self.l[1:] + [[yy, xx]]
 
-class Game:
-        
+class Game:   
     def startgame(self, scr):
         board = Board(8, 20)
         board.snakeposition(3, 3)
         board.foodposition(4,3)
         board.draw(scr)     
-        direction = (-1, 0)
-        while True:
-            scr.timeout(150)
+        direction = (1, 0)
+        while not board.over():
+            scr.timeout(200)
             ch = scr.getch()
             if ch == curses.KEY_UP:
+                if direction in {(-1, 0), (1,0)}:
+                    continue
                 direction = (-1, 0)
             if ch == curses.KEY_DOWN:
+                if direction in {(-1, 0), (1,0)}:
+                    continue
                 direction = (1, 0)
             if ch == curses.KEY_LEFT:
+                if direction in {(0, 1), (0,-1)}:
+                    continue
                 direction = (0, -1)
             if ch == curses.KEY_RIGHT:
+                if direction in {(0, -1), (0,1)}:
+                    continue
                 direction = (0, 1)
             if ch == ord('q'):
                 break
             board.move(direction[0], direction[1])
             scr.clear()
             board.draw(scr)
-        
-
+        while True:
+            ch = scr.getch()
+            if ch == ord('q'):
+                return
 
 def main(scr):
     scr.clear()
     game = Game()
     game.startgame(scr)
-
 
 if __name__ == '__main__':
     curses.wrapper(main)
