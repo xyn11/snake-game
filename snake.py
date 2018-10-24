@@ -1,6 +1,7 @@
 import curses
 from curses import KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN
 from random import randint
+import time
 
 class Board:
     def __init__(self, m, n):
@@ -10,15 +11,17 @@ class Board:
         self.l = []
 
     def snakeposition(self, y, x):
-        self.snakey = y
-        self.snakex = x
+        self.l = [[y, x]]
 
     def foodposition(self, y, x):
         self.foody = y
         self.foodx = x
 
-    def uneaten(self):
-        while self.snakey == self.foody and self.snakex == self.foodx:
+    def snakehead(self):
+        return self.l[-1]
+
+    def oneaten(self):
+        while [self.foody, self.foodx] in self.l:
             self.foody = randint(1, self.m - 1)
             self.foodx = randint(1, self.n - 1)
 
@@ -29,14 +32,12 @@ class Board:
         for x in range(1, self.n):
             scr.addstr(0, x, '+')
             scr.addstr(self.m, x, '+')
-        scr.addstr(self.m+1, 1, 'score:'+str(self.score))
+        scr.addstr(self.m+1, 5, 'score:'+str(self.score))
 
-        if self.snakey == self.foody and self.snakex == self.foodx:
-            self.score += 1
-            self.l.append(self.tmp)
-            self.uneaten()
         scr.addstr(self.foody, self.foodx, '?') 
-        scr.addstr(self.snakey, self.snakex, '-')
+        scr.addstr(self.l[-1][0], self.l[-1][1], '*')
+        for i in range(len(self.l) - 2, -1, -1):
+            scr.addstr(self.l[i][0], self.l[i][1], 'o')
         scr.move(self.m + 1, self.n + 1)
         scr.refresh()
 
@@ -44,35 +45,40 @@ class Board:
         return self.over
 
     def move(self, dy, dx):
-        self.tmp = [self.snakey, self.snakex]
-        if self.snakey + dy >= 0 and self.snakey + dy < self.m:
-            self.snakey += dy
-        if self.snakex + dx >= 0 and self.snakex + dx < self.n:
-            self.snakex += dx
-
+        yy, xx = self.snakehead()
+        yy += dy
+        xx += dx
+        if [yy, xx] in self.l or yy < 1 or yy >= self.m or xx < 1 or xx >= self.n:
+            return        
+        if yy == self.foody and xx == self.foodx:
+            self.score += 1
+            self.l.append([yy, xx])
+            self.oneaten()
+        else:
+            self.l = self.l[1:] + [[yy, xx]]
 
 class Game:
         
     def startgame(self, scr):
-        board = Board(6, 10)
+        board = Board(8, 20)
         board.snakeposition(3, 3)
-        board.foodposition(4,7)
+        board.foodposition(4,3)
         board.draw(scr)     
-        score = 0
-
+        direction = (-1, 0)
         while True:
+            scr.timeout(150)
             ch = scr.getch()
             if ch == curses.KEY_UP:
-                board.move(-1, 0)
+                direction = (-1, 0)
             if ch == curses.KEY_DOWN:
-                board.move(1, 0)
+                direction = (1, 0)
             if ch == curses.KEY_LEFT:
-                board.move(0, -1)
+                direction = (0, -1)
             if ch == curses.KEY_RIGHT:
-                board.move(0, 1)
+                direction = (0, 1)
             if ch == ord('q'):
                 break
-
+            board.move(direction[0], direction[1])
             scr.clear()
             board.draw(scr)
         
